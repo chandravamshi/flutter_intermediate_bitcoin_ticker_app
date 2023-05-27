@@ -27,6 +27,7 @@ class _PriceScreenState extends State<PriceScreen> {
       onChanged: (value) {
         setState(() {
           selectedCurrency = value.toString();
+          getData();
         });
       },
     );
@@ -43,18 +44,33 @@ class _PriceScreenState extends State<PriceScreen> {
         itemExtent: 32.0,
         onSelectedItemChanged: (selctedIndex) {
           // print(selctedIndex);
+          selectedCurrency = currenciesList[selctedIndex];
+          getData();
         },
         children: pickerItems);
   }
 
-  String bitCoinValueInUSD = '?';
+  Map<String, String> coinValues = {};
+  bool isWaiting = false;
+
+  getCoinWidgets() {
+    List<CoinWidget> coinWidgets = [];
+    for (String coin in cryptoList) {
+      coinWidgets.add(CoinWidget(
+          coin: coin,
+          selectedCurrency: selectedCurrency,
+          value: isWaiting ? '?' : coinValues[coin] ?? '?'));
+    }
+    return coinWidgets;
+  }
 
   void getData() async {
+    isWaiting = true;
     try {
-      var data = await CoinData().getCoinData();
-
+      Map<String, String> data = await CoinData().getCoinData(selectedCurrency);
+      isWaiting = false;
       setState(() {
-        bitCoinValueInUSD = data.toString();
+        coinValues = data;
       });
     } catch (e) {
       rethrow;
@@ -78,34 +94,13 @@ class _PriceScreenState extends State<PriceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = $bitCoinValueInUSD $selectedCurrency',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          ...getCoinWidgets(),
           Container(
             height: 150.0,
             alignment: Alignment.center,
             padding: const EdgeInsets.only(bottom: 30.0),
             color: Colors.lightBlue,
-            child: androidDropDown(),
+            child: iosPicker(),
           ),
         ],
       ),
@@ -113,9 +108,40 @@ class _PriceScreenState extends State<PriceScreen> {
   }
 }
 
+class CoinWidget extends StatelessWidget {
+  const CoinWidget({
+    super.key,
+    required this.coin,
+    required this.selectedCurrency,
+    required this.value,
+  });
 
+  final String coin;
+  final String selectedCurrency;
+  final String value;
 
-/**
- * 
- * 
- */
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0.0),
+      child: Card(
+        color: Colors.lightBlueAccent,
+        elevation: 5.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+          child: Text(
+            '$coin = $value $selectedCurrency',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20.0,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
